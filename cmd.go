@@ -83,15 +83,21 @@ func CmdProcess(rawCmd string) error {
 		// boolean params (flags) don't need values
 		if parameterType == TypeOf[bool]() {
 			parsedParams[parameterName] = "true"
+		// all other params are treated as strings
 		} else {
 			// iterate it to get next word, should be value as param is not bool type
 			it += 1
+			// check if the index exists first
+			// error with "no value supplied for param"
+			if it >= len(listCmd) {
+				return fmt.Errorf(prettyErrorFormatString, "The string parameter \"" + parameterName + "\" was not provided a value.")
+			}
 			parameterValue := listCmd[it]
 			parsedParams[parameterName] = parameterValue
 		}
 	}
 
-	// run the command
+	// run the command if not nil
 	if specificCmd.Handler == nil {
 		return fmt.Errorf(prettyErrorFormatString, "Handler function for command \"" + specificCmd.CommandName + "\" not specified (nil)")
 	}

@@ -18,7 +18,10 @@ func Test_CmdProcess(t *testing.T){
 	// add a dummy command
 	cmdMap["test"] = CmdCommand {
 		CommandName: "test",
-		Handler: nil,
+		Handler: func(map[string]string) error {
+			fmt.Println("Poggers")
+			return nil
+		},
 		Parameters: map[string]reflect.Type{
 			"--foo": TypeOf[string](),
 			"--bar": TypeOf[bool](),
