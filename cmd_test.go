@@ -37,8 +37,6 @@ func Test_CmdProcess(t *testing.T) {
 			},
 		},
 		HelpMessage: "testhelp",
-		HelpHandler: func(string) {
-		},
 	})
 	// cmdMap["test"] = CmdCommand{
 	// 	Handler: func(params map[string]string) error {

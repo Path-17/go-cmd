@@ -78,7 +78,6 @@ const errorWrapFormatString = "ERROR: %w"
 // Parameters field is used for easy error handling,
 type CmdCommand struct {
 	Handler     func(map[string]string) error
-	HelpHandler func(string)
 	Parameters  map[string]CmdParam
 	HelpMessage string
 }
@@ -91,16 +90,17 @@ type CmdParam struct {
 
 type cmdApp struct {
 	registeredCommands map[string]CmdCommand
-	appHelpHandler     func()
 	helpMessage        string
 }
 
-func defaultAppHelpHandler() {
+// TODO 
+func (cmd CmdCommand) CmdHelp() {
 
 	// loop through all of the commands
 }
 
-func DefaultHelp(cmdName string) error {
+// TODO 
+func (app cmdApp) AppHelp() error {
 
 	// Get the CmdCommand associated with cmdName
 	// if cmd, ok := app.registeredCommands[cmdName]; ok {
