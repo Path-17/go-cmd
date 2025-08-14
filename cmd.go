@@ -2,7 +2,7 @@ package go_cmd
 
 import (
 	"fmt"
-	"maps"
+	// "maps"
 	"reflect"
 	"strings"
 )
@@ -62,7 +62,7 @@ func parseParams(listCmd []string, specificCmd CmdCommand) (map[string]string, e
 }
 
 // Local global only written to by CmdInit
-var registeredCommands map[string]CmdCommand
+// var registeredCommands map[string]CmdCommand
 
 // Base format string for error messages
 // takes a location and a error message, debugging
@@ -78,7 +78,7 @@ const errorWrapFormatString = "ERROR: %w"
 // Parameters field is used for easy error handling,
 type CmdCommand struct {
 	Handler     func(map[string]string) error
-	HelpHandler func(map[string]string) error
+	HelpHandler func(string)
 	Parameters  map[string]CmdParamMetadata
 	HelpMessage string
 }
@@ -89,25 +89,50 @@ type CmdParamMetadata struct {
 	ParamHelp string
 }
 
-func CmdDefaultHelp(param map[string]string) error {
+type cmdApp struct {
+	registeredCommands map[string]CmdCommand
+	appHelpHandler     func()
+	helpMessage        string
+}
+
+func defaultAppHelpHandler() {
+
+	// loop through all of the commands
+}
+
+func DefaultHelp(cmdName string) error {
+
+	// Get the CmdCommand associated with cmdName
+	// if cmd, ok := app.registeredCommands[cmdName]; ok {
+	//
+	// }
+
 	return nil
 }
 
-func CmdGetRegisteredCommands() map[string]CmdCommand {
-	return registeredCommands
+func (app cmdApp) GetregisteredCommands() map[string]CmdCommand {
+	return app.registeredCommands
 }
 
-// Always run as configuration step
-func CmdInit(cmdMap map[string]CmdCommand) {
-	registeredCommands = make(map[string]CmdCommand)
-	clear(registeredCommands)
-	maps.Copy(registeredCommands, cmdMap)
+func CmdInitApp(appHelp string, helpHandler func()) (cmdApp, error) {
+	if helpHandler != nil {
+		return cmdApp{
+			registeredCommands: make(map[string]CmdCommand),
+			appHelpHandler:     helpHandler,
+			helpMessage:        appHelp,
+		}, nil
+	}
+	return cmdApp{}, fmt.Errorf(prettyErrorFormatString, "Must pass in a HelpHandler function for app initialization")
+}
+
+func (app cmdApp) RegisterCommand(cmdName string, cmd CmdCommand) {
+	app.registeredCommands[cmdName] = cmd
 }
 
 // Given a command string (un trimmed, no cleanups etc.) run the associated handler from registeredCommands
 // Expects the first "word" to be the key to look up in registeredCommands, case sensitive
 // Expects parameters to have --<param> value || --<param>=value format
-func CmdProcess(rawCmd string) error {
+func (app cmdApp) ProcessCommand(rawCmd string) error {
 	var err error
 	var ok bool
 
@@ -120,19 +145,19 @@ func CmdProcess(rawCmd string) error {
 
 	// if there is only one command registered + default help command, just run the only command without needing to specify it's name
 	var specificCmd CmdCommand
-	if len(registeredCommands) == 1 {
-		specificCmd = registeredCommands[CMD_MAIN]
+	if len(app.registeredCommands) == 1 {
+		specificCmd = app.registeredCommands[CMD_MAIN]
 	} else {
 		// listCmd[0] is the command name if there is more than one command registered
 		// find the associated command
-		specificCmd, ok = registeredCommands[listCmd[0]]
+		specificCmd, ok = app.registeredCommands[listCmd[0]]
 		if !ok {
 			return fmt.Errorf(prettyErrorFormatString, "The command "+listCmd[0]+" doesn't exist.")
 		}
 	}
 
 	var parsedParams map[string]string
-	if len(registeredCommands) == 1 {
+	if len(app.registeredCommands) == 1 {
 		parsedParams, err = parseParams(listCmd, specificCmd)
 	} else {
 		parsedParams, err = parseParams(listCmd[1:], specificCmd)

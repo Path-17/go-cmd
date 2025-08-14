@@ -14,9 +14,13 @@ import (
 // }
 
 func Test_CmdProcess(t *testing.T) {
-	cmdMap := make(map[string]CmdCommand)
+	cmdApp, err := CmdInitApp("Welcome to cmdApp testing", func() {})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	// add a dummy command
-	cmdMap[CMD_MAIN] = CmdCommand{
+	cmdApp.RegisterCommand(CMD_MAIN, CmdCommand{
 		Handler: func(params map[string]string) error {
 			fmt.Printf("%v", params)
 			fmt.Println("Poggers")
@@ -37,8 +41,9 @@ func Test_CmdProcess(t *testing.T) {
 			},
 		},
 		HelpMessage: "testhelp",
-		HelpHandler: CmdDefaultHelp,
-	}
+		HelpHandler: func(string) {
+		},
+	})
 	// cmdMap["test"] = CmdCommand{
 	// 	Handler: func(params map[string]string) error {
 	// 		fmt.Printf("%v", params)
@@ -69,8 +74,7 @@ func Test_CmdProcess(t *testing.T) {
 	// 	},
 	// 	HelpMessage: "testhelp",
 	// }
-	CmdInit(cmdMap)
-	err := CmdProcess("--help --foo=test --bar")
+	err = cmdApp.ProcessCommand("--help --foo=test --bar")
 	// TODO: add support for quotes!
 	// err := CmdProcess("--help --foo='test' --bar")
 	if err != nil {
