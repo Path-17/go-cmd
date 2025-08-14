@@ -17,7 +17,7 @@ import (
 // ---> two types of params, boolean (flag present), and specific (typed in value)
 
 // Helper function to easily get runtime typing since types are not first class for some reason...
-func TypeOf[T any]() reflect.Type {
+func CmdTypeOf[T any]() reflect.Type {
 	var zero T
 	return reflect.TypeOf(zero)
 }
@@ -67,7 +67,7 @@ func CmdProcess(rawCmd string) error {
 		return fmt.Errorf(prettyErrorFormatString, "The command "+listCmd[0]+" doesn't exist.")
 	}
 
-	// make sure that the params are valid
+	// make sure that the params are valid, and fill out the parsedParams map
 	// bool params have no values
 	// regular params have one value
 	parsedParams := make(map[string]string)
@@ -81,14 +81,14 @@ func CmdProcess(rawCmd string) error {
 		// can rename the variable, know that it is a valid param name
 		parameterName := word
 		// boolean params (flags) don't need values
-		if parameterType == TypeOf[bool]() {
+		if parameterType == CmdTypeOf[bool]() {
 			parsedParams[parameterName] = "true"
 		// all other params are treated as strings
 		} else {
-			// iterate it to get next word, should be value as param is not bool type
+			// iterate it to get next word, should be value as current param is not bool type
 			it += 1
 			// check if the index exists first
-			// error with "no value supplied for param"
+			// ---> if not error with "no value supplied for param"
 			if it >= len(listCmd) {
 				return fmt.Errorf(prettyErrorFormatString, "The string parameter \"" + parameterName + "\" was not provided a value.")
 			}

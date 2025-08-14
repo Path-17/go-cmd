@@ -23,13 +23,13 @@ func Test_CmdProcess(t *testing.T){
 			return nil
 		},
 		Parameters: map[string]reflect.Type{
-			"--foo": TypeOf[string](),
-			"--bar": TypeOf[bool](),
+			"--foo": CmdTypeOf[string](),
+			"--bar": CmdTypeOf[bool](),
 		},
 		HelpMessage: "testhelp",
 	}
 	CmdInit(cmdMap)
-	err := CmdProcess("test --foo 1 --bar")
+	err := CmdProcess("test --bar --foo")
 	if err != nil{
 		fmt.Print(err)
 	}
