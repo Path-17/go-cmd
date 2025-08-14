@@ -16,10 +16,49 @@ import (
 // ---> replace all = with spaces
 // ---> two types of params, boolean (flag present), and specific (typed in value)
 
+// Global consts
+const CMD_MAIN string = "main"
+
 // Helper function to easily get runtime typing since types are not first class for some reason...
 func CmdTypeOf[T any]() reflect.Type {
 	var zero T
 	return reflect.TypeOf(zero)
+}
+
+// Helper function for param parsing
+// Pass in the slice of listCmd that doesn't include the command name
+// ex: for command "foo --bar=test", with listCmd [foo, --bar, test]
+// --> pass in [--bar, test] with the correct specificCmd using list[1:]
+func parseParams(listCmd []string, specificCmd CmdCommand) (map[string]string, error) {
+	parsedParams := make(map[string]string)
+	for it := 0; it < len(listCmd); it += 1 {
+		// if the paramName doesn't exist in command description, return err
+		word := listCmd[it]
+		parameterType, ok := specificCmd.Parameters[word]
+		if !ok {
+			return nil, fmt.Errorf(prettyErrorFormatString, "The parameter \""+word+"\" doesn't exist.")
+		}
+		// can rename the variable, know that it is a valid param name
+		parameterName := word
+		// boolean params (flags) don't need values
+		if parameterType.ParamType == CmdTypeOf[bool]() {
+			parsedParams[parameterName] = "true"
+			// all other params are treated as strings
+		} else {
+			// iterate it to get next word, should be value as current param is not bool type
+			it += 1
+			// check if the index exists first
+			// ---> if not error with "no value supplied for param"
+			if it >= len(listCmd) {
+				return nil, fmt.Errorf(prettyErrorFormatString, "The string parameter \""+parameterName+"\" was not provided a value.")
+			}
+			// check if the next index is another param instead of a value
+			parameterValue := listCmd[it]
+			parsedParams[parameterName] = parameterValue
+		}
+	}
+
+	return parsedParams, nil
 }
 
 // Local global only written to by CmdInit
@@ -38,10 +77,24 @@ const errorWrapFormatString = "ERROR: %w"
 // Description of a command, built up by the user and passed in to init inside of a map
 // Parameters field is used for easy error handling,
 type CmdCommand struct {
-	CommandName string
 	Handler     func(map[string]string) error
-	Parameters  map[string]reflect.Type
+	HelpHandler func(map[string]string) error
+	Parameters  map[string]CmdParamMetadata
 	HelpMessage string
+}
+
+type CmdParamMetadata struct {
+	ParamName string
+	ParamType reflect.Type
+	ParamHelp string
+}
+
+func CmdDefaultHelp(param map[string]string) error {
+	return nil
+}
+
+func CmdGetRegisteredCommands() map[string]CmdCommand {
+	return registeredCommands
 }
 
 // Always run as configuration step
@@ -55,57 +108,45 @@ func CmdInit(cmdMap map[string]CmdCommand) {
 // Expects the first "word" to be the key to look up in registeredCommands, case sensitive
 // Expects parameters to have --<param> value || --<param>=value format
 func CmdProcess(rawCmd string) error {
+	var err error
+	var ok bool
+
 	// clean up the string first
 	trimmedCmd := strings.TrimSpace(rawCmd)
 	// allow '=' or spaces to be used in commands, treated the same
 	normalizedCmd := strings.ReplaceAll(trimmedCmd, "=", " ")
 	listCmd := strings.Split(normalizedCmd, " ")
+	// Check if help was called
 
-	// listCmd[0] is the command name
-	specificCmd, ok := registeredCommands[listCmd[0]]
-	if !ok {
-		return fmt.Errorf(prettyErrorFormatString, "The command "+listCmd[0]+" doesn't exist.")
+	// if there is only one command registered + default help command, just run the only command without needing to specify it's name
+	var specificCmd CmdCommand
+	if len(registeredCommands) == 1 {
+		specificCmd = registeredCommands[CMD_MAIN]
+	} else {
+		// listCmd[0] is the command name if there is more than one command registered
+		// find the associated command
+		specificCmd, ok = registeredCommands[listCmd[0]]
+		if !ok {
+			return fmt.Errorf(prettyErrorFormatString, "The command "+listCmd[0]+" doesn't exist.")
+		}
 	}
 
-	// make sure that the params are valid, and fill out the parsedParams map
-	// bool params have no values
-	// regular params have one value
-	parsedParams := make(map[string]string)
-	for it := 1; it < len(listCmd); it += 1 {
-		// if the paramName doesn't exist in command description, return err
-		word := listCmd[it]
-		parameterType, ok := specificCmd.Parameters[word]
-		if !ok {
-			return fmt.Errorf(prettyErrorFormatString, "The parameter "+word+" doesn't exist.")
-		}
-		// can rename the variable, know that it is a valid param name
-		parameterName := word
-		// boolean params (flags) don't need values
-		if parameterType == CmdTypeOf[bool]() {
-			parsedParams[parameterName] = "true"
-		// all other params are treated as strings
-		} else {
-			// iterate it to get next word, should be value as current param is not bool type
-			it += 1
-			// check if the index exists first
-			// ---> if not error with "no value supplied for param"
-			if it >= len(listCmd) {
-				return fmt.Errorf(prettyErrorFormatString, "The string parameter \"" + parameterName + "\" was not provided a value.")
-			}
-			parameterValue := listCmd[it]
-			parsedParams[parameterName] = parameterValue
-		}
+	var parsedParams map[string]string
+	if len(registeredCommands) == 1 {
+		parsedParams, err = parseParams(listCmd, specificCmd)
+	} else {
+		parsedParams, err = parseParams(listCmd[1:], specificCmd)
+	}
+	if err != nil {
+		return err
 	}
 
 	// run the command if not nil
 	if specificCmd.Handler == nil {
-		return fmt.Errorf(prettyErrorFormatString, "Handler function for command \"" + specificCmd.CommandName + "\" not specified (nil)")
+		return fmt.Errorf(prettyErrorFormatString, "Handler function for command not specified (nil)")
 	}
-	err := specificCmd.Handler(parsedParams)
-	if err != nil {
-		return fmt.Errorf(errorWrapFormatString, err)
-	}
+	err = specificCmd.Handler(parsedParams)
 
-	return nil
+	return err
 
 }
