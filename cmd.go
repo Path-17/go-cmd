@@ -79,11 +79,11 @@ const errorWrapFormatString = "ERROR: %w"
 type CmdCommand struct {
 	Handler     func(map[string]string) error
 	HelpHandler func(string)
-	Parameters  map[string]CmdParamMetadata
+	Parameters  map[string]CmdParam
 	HelpMessage string
 }
 
-type CmdParamMetadata struct {
+type CmdParam struct {
 	ParamName string
 	ParamType reflect.Type
 	ParamHelp string
@@ -114,15 +114,11 @@ func (app cmdApp) GetregisteredCommands() map[string]CmdCommand {
 	return app.registeredCommands
 }
 
-func CmdInitApp(appHelp string, helpHandler func()) (cmdApp, error) {
-	if helpHandler != nil {
+func CmdInitApp(appHelp string) cmdApp {
 		return cmdApp{
 			registeredCommands: make(map[string]CmdCommand),
-			appHelpHandler:     helpHandler,
 			helpMessage:        appHelp,
-		}, nil
-	}
-	return cmdApp{}, fmt.Errorf(prettyErrorFormatString, "Must pass in a HelpHandler function for app initialization")
+		}
 }
 
 func (app cmdApp) RegisterCommand(cmdName string, cmd CmdCommand) {
