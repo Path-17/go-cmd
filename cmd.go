@@ -103,7 +103,7 @@ type CmdParam struct {
 	ParamValue string
 }
 
-type cmdApp struct {
+type CmdApp struct {
 	AppName            string
 	registeredCommands map[string]CmdCommand
 	helpMessage        string
@@ -118,8 +118,9 @@ func (cmd CmdCommand) CmdHelp() {
 	}
 }
 
-func (app cmdApp) AppHelp() {
+func (app CmdApp) AppHelp() {
 
+	fmt.Printf("%s\n",app.helpMessage)
 	if len(app.registeredCommands) == 1 {
 		fmt.Printf("\nUsage: %s [params]\n\n", os.Args[0])
 		app.registeredCommands[CMD_MAIN].CmdHelp()
@@ -131,25 +132,25 @@ func (app cmdApp) AppHelp() {
 	}
 }
 
-func (app cmdApp) GetregisteredCommands() map[string]CmdCommand {
+func (app CmdApp) GetregisteredCommands() map[string]CmdCommand {
 	return app.registeredCommands
 }
 
-func CmdInitApp(appHelp string) cmdApp {
-	return cmdApp{
+func CmdInitApp(appHelp string) CmdApp {
+	return CmdApp{
 		registeredCommands: make(map[string]CmdCommand),
 		helpMessage:        appHelp,
 	}
 }
 
-func (app cmdApp) RegisterCommand(cmd CmdCommand) {
+func (app CmdApp) RegisterCommand(cmd CmdCommand) {
 	app.registeredCommands[cmd.CmdName] = cmd
 }
 
 // Given a command string (un trimmed, no cleanups etc.) run the associated handler from registeredCommands
 // Expects the first "word" to be the key to look up in registeredCommands, case sensitive
 // Expects parameters to have --<param> value || --<param>=value format
-func (app cmdApp) ProcessCommand(rawCmd string) error {
+func (app CmdApp) ProcessCommand(rawCmd string) error {
 	var err error
 	var ok bool
 
